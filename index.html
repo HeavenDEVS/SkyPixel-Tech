@@ -196,7 +196,8 @@
         const DRONE_COUNT = isMobile ? 12000 : 25000;
         const CANVAS_W = 1600;
         const CANVAS_H = 900;
-        const STRIDE = isMobile ? 5 : 3;
+        // Reduced stride on mobile from 5 to 4 for better shape definition and clarity
+        const STRIDE = isMobile ? 4 : 3;
         
         // Scene variables
         let scene, camera, renderer, controls, composer;
@@ -236,8 +237,9 @@
 
             // 2. Post-Processing (Tighter Bloom for Crisper Glow)
             const renderScene = new RenderPass(scene, camera);
-            // Tuned bloom pass: slightly tighter radius and distinct threshold for extreme quality
-            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.25, 0.15);
+            // Increased bloom strength specifically on mobile to make it pop and look brighter
+            const bloomStrength = isMobile ? 2.5 : 1.5;
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), bloomStrength, 0.25, 0.15);
             
             composer = new EffectComposer(renderer);
             composer.addPass(renderScene);
@@ -307,7 +309,7 @@
                 { id: 3, draw: drawEidMubarak, scale: 0.5, yOffset: 140 },
                 { id: 4, draw: drawLaylatulQadr, scale: 0.45, yOffset: 140 },
                 { id: 5, draw: drawZakat, scale: 0.45, yOffset: 140 },
-                { id: 6, draw: drawNigeriaMap, scale: 0.45, yOffset: 150 },
+                { id: 6, draw: drawNigeriaFlag, scale: 0.45, yOffset: 150 },
                 { id: 7, draw: drawMosque, scale: 0.5, yOffset: 150 }
             ];
 
@@ -569,52 +571,55 @@
             ctx.textAlign = 'left';
         }
 
-        function drawNigeriaMap(ctx) {
+        function drawNigeriaFlag(ctx) {
             const cx = CANVAS_W/2;
-            const cy = CANVAS_H/2 - 20;
+            const cy = CANVAS_H/2 - 50; // Shift up slightly to balance text
 
-            let mapGrad = ctx.createLinearGradient(cx - 300, cy - 300, cx + 300, cy + 300);
-            mapGrad.addColorStop(0, '#00FF44');
-            mapGrad.addColorStop(0.5, '#FFFFFF');
-            mapGrad.addColorStop(1, '#00FF44');
+            const flagWidth = 750;
+            const flagHeight = 450;
+            const stripeWidth = flagWidth / 3;
+            const startX = cx - flagWidth / 2;
+            const startY = cy - flagHeight / 2;
+
+            // Bright Green gradient
+            let greenGrad = ctx.createLinearGradient(0, startY, 0, startY + flagHeight);
+            greenGrad.addColorStop(0, '#00FF44');
+            greenGrad.addColorStop(1, '#00AA22');
+
+            // Pure White gradient
+            let whiteGrad = ctx.createLinearGradient(0, startY, 0, startY + flagHeight);
+            whiteGrad.addColorStop(0, '#FFFFFF');
+            whiteGrad.addColorStop(1, '#CCCCCC');
+
+            // Draw Flag
+            // Left Green
+            ctx.fillStyle = greenGrad;
+            ctx.fillRect(startX, startY, stripeWidth, flagHeight);
             
-            ctx.strokeStyle = '#00FF44'; 
-            ctx.fillStyle = mapGrad;
-            ctx.lineWidth = 12;
-            ctx.lineJoin = 'round';
-            
-            ctx.beginPath();
-            ctx.moveTo(cx - 250, cy - 250); 
-            ctx.lineTo(cx - 50, cy - 300);  
-            ctx.lineTo(cx + 250, cy - 200); 
-            ctx.lineTo(cx + 380, cy - 50);  
-            ctx.lineTo(cx + 250, cy + 180); 
-            ctx.lineTo(cx + 80, cy + 320);  
-            ctx.lineTo(cx - 150, cy + 250); 
-            ctx.lineTo(cx - 280, cy + 50);  
-            ctx.closePath();
-            
-            ctx.globalAlpha = 0.5;
-            ctx.fill();
-            ctx.globalAlpha = 1.0;
-            ctx.stroke();
+            // Middle White
+            ctx.fillStyle = whiteGrad;
+            ctx.fillRect(startX + stripeWidth, startY, stripeWidth, flagHeight);
 
-            ctx.fillStyle = '#006600';
-            ctx.beginPath(); ctx.arc(cx, cy, 60, 0, Math.PI*2); ctx.fill();
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.beginPath(); ctx.arc(cx + 15, cy - 15, 50, 0, Math.PI*2); ctx.fill();
-            ctx.globalCompositeOperation = 'source-over';
+            // Right Green
+            ctx.fillStyle = greenGrad;
+            ctx.fillRect(startX + stripeWidth * 2, startY, stripeWidth, flagHeight);
 
-            const drawCity = (x, y, name) => {
-                ctx.fillStyle = '#FFFFFF';
-                ctx.beginPath(); ctx.arc(x, y, 15, 0, Math.PI*2); ctx.fill();
-                ctx.font = '800 35px "Montserrat"';
-                ctx.fillText(name, x + 25, y + 10);
-            };
+            // Subtle 3D wave overlay (adds depth when extracted to 3D drones)
+            let shadowGrad = ctx.createLinearGradient(startX, 0, startX + flagWidth, 0);
+            shadowGrad.addColorStop(0, 'rgba(0,0,0,0.15)');
+            shadowGrad.addColorStop(0.25, 'rgba(255,255,255,0.15)');
+            shadowGrad.addColorStop(0.5, 'rgba(0,0,0,0.2)');
+            shadowGrad.addColorStop(0.75, 'rgba(255,255,255,0.15)');
+            shadowGrad.addColorStop(1, 'rgba(0,0,0,0.15)');
+            ctx.fillStyle = shadowGrad;
+            ctx.fillRect(startX, startY, flagWidth, flagHeight);
 
-            drawCity(cx - 200, cy + 180, "Lagos");
-            drawCity(cx + 50, cy - 150, "Kano");
-            drawCity(cx + 10, cy + 50, "Abuja");
+            // Text below the flag
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            ctx.font = '900 85px "Montserrat", sans-serif';
+            ctx.fillText("N I G E R I A", cx, cy + 300);
+            ctx.textAlign = 'left';
         }
 
         function drawMosque(ctx) {
@@ -749,18 +754,19 @@
                 velocities[i3] = 0; velocities[i3+1] = 0; velocities[i3+2] = 0;
             }
 
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
             const material = new THREE.PointsMaterial({
-                size: 5.5, 
+                // Significantly larger physical size on mobile to fill out the form
+                size: isMobile ? 8.5 : 5.5, 
                 map: createLEDTexture(),
                 vertexColors: true,
                 transparent: true,
-                opacity: 0.9,
+                opacity: 1.0, // Max opacity for crisp lighting
                 blending: THREE.AdditiveBlending,
                 depthWrite: false
             });
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
             droneSystem = new THREE.Points(geometry, material);
             scene.add(droneSystem);
@@ -808,56 +814,59 @@
             requestAnimationFrame(animate);
             const time = clock.getElapsedTime();
 
-            if (droneSystem) {
-                const posAttr = droneSystem.geometry.attributes.position;
-                const colAttr = droneSystem.geometry.attributes.color;
+            // Guard against uninitialized geometry attributes during rapid reloads/early frames
+            if (droneSystem && droneSystem.geometry) {
+                const posAttr = droneSystem.geometry.getAttribute('position');
+                const colAttr = droneSystem.geometry.getAttribute('color');
                 
-                const posArray = posAttr.array;
-                const colArray = colAttr.array;
+                if (posAttr && colAttr) {
+                    const posArray = posAttr.array;
+                    const colArray = colAttr.array;
 
-                for (let i = 0; i < DRONE_COUNT; i++) {
-                    const i3 = i * 3;
-                    
-                    let dx = targets[i3] - posArray[i3];
-                    let dy = targets[i3+1] - posArray[i3+1];
-                    let dz = targets[i3+2] - posArray[i3+2];
+                    for (let i = 0; i < DRONE_COUNT; i++) {
+                        const i3 = i * 3;
+                        
+                        let dx = targets[i3] - posArray[i3];
+                        let dy = targets[i3+1] - posArray[i3+1];
+                        let dz = targets[i3+2] - posArray[i3+2];
 
-                    velocities[i3] += dx * SPRING_STRENGTH;
-                    velocities[i3+1] += dy * SPRING_STRENGTH;
-                    velocities[i3+2] += dz * SPRING_STRENGTH;
+                        velocities[i3] += dx * SPRING_STRENGTH;
+                        velocities[i3+1] += dy * SPRING_STRENGTH;
+                        velocities[i3+2] += dz * SPRING_STRENGTH;
 
-                    velocities[i3] *= DAMPING;
-                    velocities[i3+1] *= DAMPING;
-                    velocities[i3+2] *= DAMPING;
+                        velocities[i3] *= DAMPING;
+                        velocities[i3+1] *= DAMPING;
+                        velocities[i3+2] *= DAMPING;
 
-                    posArray[i3] += velocities[i3];
-                    posArray[i3+1] += velocities[i3+1];
-                    posArray[i3+2] += velocities[i3+2];
+                        posArray[i3] += velocities[i3];
+                        posArray[i3+1] += velocities[i3+1];
+                        posArray[i3+2] += velocities[i3+2];
 
-                    if (currentState !== 0 && targets[i3+2] > -400) {
-                        posArray[i3+1] += Math.sin(time * 2 + i * 0.1) * 0.15; 
+                        if (currentState !== 0 && targets[i3+2] > -400) {
+                            posArray[i3+1] += Math.sin(time * 2 + i * 0.1) * 0.15; 
+                        }
+
+                        const colorLerp = 0.06;
+                        colArray[i3] += (targetColors[i3] - colArray[i3]) * colorLerp;
+                        colArray[i3+1] += (targetColors[i3+1] - colArray[i3+1]) * colorLerp;
+                        colArray[i3+2] += (targetColors[i3+2] - colArray[i3+2]) * colorLerp;
                     }
 
-                    const colorLerp = 0.06;
-                    colArray[i3] += (targetColors[i3] - colArray[i3]) * colorLerp;
-                    colArray[i3+1] += (targetColors[i3+1] - colArray[i3+1]) * colorLerp;
-                    colArray[i3+2] += (targetColors[i3+2] - colArray[i3+2]) * colorLerp;
+                    posAttr.needsUpdate = true;
+                    colAttr.needsUpdate = true;
                 }
-
-                posAttr.needsUpdate = true;
-                colAttr.needsUpdate = true;
             }
 
             // ONLY updates user controls, no forced automatic rotation
             controls.update();
-            composer.render();
+            if (composer) composer.render();
         }
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            composer.setSize(window.innerWidth, window.innerHeight);
+            if (composer) composer.setSize(window.innerWidth, window.innerHeight);
         }
     </script>
 </body>
