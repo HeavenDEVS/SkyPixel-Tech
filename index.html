@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium 3D Drone Show Experience</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;600;800&display=swap');
+        
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #030305;
+            font-family: 'Montserrat', sans-serif;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #ui {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            pointer-events: none;
+            z-index: 10;
+            width: 95%;
+            max-width: 1200px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            pointer-events: auto;
+            background: rgba(10, 10, 15, 0.6);
+            padding: 20px 30px;
+            border-radius: 24px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        button {
+            background: rgba(255, 255, 255, 0.03);
+            color: #ccc;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Montserrat', sans-serif;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 5px 15px rgba(255,255,255,0.1);
+        }
+        button.active {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+            transform: scale(1.05);
+        }
+        .header {
+            position: absolute;
+            top: 35px;
+            left: 40px;
+            color: #fff;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.9);
+            background: linear-gradient(90deg, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header p {
+            margin: 8px 0 0 0;
+            font-size: 14px;
+            font-weight: 300;
+            color: #888;
+            letter-spacing: 1px;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 3px;
+            text-align: center;
+            transition: opacity 0.8s;
+            background: rgba(5, 5, 8, 0.9);
+            padding: 40px 60px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+        }
+        .spinner {
+            margin: 25px auto 0;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.5, 0.1, 0.4, 0.9) infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    <!-- Import Three.js and Addons -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Nightfall Sync</h1>
+        <p>Interactive Drone Engine &bull; Drag to explore</p>
+    </div>
+
+    <div id="loading">
+        <div>INITIALIZING 25,000 DRONES</div>
+        <div class="spinner"></div>
+    </div>
+
+    <div id="ui">
+        <div class="controls">
+            <button id="btn-0" onclick="window.setDroneState(0)">Ground</button>
+            <button id="btn-1" onclick="window.setDroneState(1)">TAJBank</button>
+            <button id="btn-2" onclick="window.setDroneState(2)">Ramadan</button>
+            <button id="btn-3" onclick="window.setDroneState(3)">Eid Mubarak</button>
+            <button id="btn-4" onclick="window.setDroneState(4)">Laylatul Qadr</button>
+            <button id="btn-5" onclick="window.setDroneState(5)">Zakat</button>
+            <button id="btn-6" onclick="window.setDroneState(6)">Nigeria</button>
+            <button id="btn-7" onclick="window.setDroneState(7)">Mosque</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        // --- Core Configuration ---
+        const DRONE_COUNT = 25000;
+        const CANVAS_W = 1600;
+        const CANVAS_H = 900;
+        
+        // Scene variables
+        let scene, camera, renderer, controls, composer;
+        let droneSystem, positions, targets, colors, targetColors, velocities;
+        let pointSets = {};
+        let currentState = -1;
+        let clock = new THREE.Clock();
+        
+        // Physics variables for beautiful organic movement
+        const SPRING_STRENGTH = 0.003; 
+        const DAMPING = 0.88;
+
+        // Internal rendering canvas for shape extraction
+        const extractCanvas = document.createElement('canvas');
+        extractCanvas.width = CANVAS_W;
+        extractCanvas.height = CANVAS_H;
+        const ctx = extractCanvas.getContext('2d', { willReadFrequently: true });
+
+        init();
+
+        async function init() {
+            const container = document.getElementById('canvas-container');
+            
+            // 1. Core Scene Setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x030306, 0.0008); // Deeper atmospheric fog
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 4000);
+            camera.position.set(0, 80, 750);
+
+            renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // optimize performance
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x020204);
+            container.appendChild(renderer.domElement);
+
+            // 2. Post-Processing (Bloom for Drone Glow)
+            const renderScene = new RenderPass(scene, camera);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.8, 0.4, 0.1);
+            
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+
+            // 3. Camera Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.04;
+            controls.maxPolarAngle = Math.PI / 2 + 0.02; // Prevent going deeply underground
+            controls.minDistance = 150;
+            controls.maxDistance = 1500;
+            controls.target.set(0, 120, 0);
+
+            // 4. Environment
+            createEnvironment();
+
+            // 5. Procedurally Draw and Extract all Formations
+            await generateFormations();
+
+            // 6. Initialize Physics Arrays and Drone Mesh
+            setupDrones();
+
+            // 7. Reveal & Start
+            document.getElementById('loading').style.opacity = 0;
+            setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 800);
+            
+            // Auto start show with TAJBank
+            setTimeout(() => { window.setDroneState(1); }, 1500);
+
+            window.addEventListener('resize', onWindowResize);
+            animate();
+        }
+
+        function createEnvironment() {
+            // Dark mirror-like ground
+            const groundGeo = new THREE.PlaneGeometry(5000, 5000);
+            const groundMat = new THREE.MeshBasicMaterial({ color: 0x050508, depthWrite: false, transparent: true, opacity: 0.8 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -10;
+            scene.add(ground);
+        }
+
+        async function generateFormations() {
+            // Ground State (0) - Neatly arranged grid
+            pointSets[0] = [];
+            let gridSize = Math.ceil(Math.sqrt(DRONE_COUNT));
+            let spacing = 15;
+            let offset = (gridSize * spacing) / 2;
+            
+            for (let i = 0; i < DRONE_COUNT; i++) {
+                let r = Math.floor(i / gridSize);
+                let c = i % gridSize;
+                pointSets[0].push({
+                    x: c * spacing - offset,
+                    y: -5, // Rest on ground
+                    z: r * spacing - offset + 200,
+                    r: 0.05, g: 0.1, b: 0.2 // Very dim standby blue
+                });
+            }
+
+            // Define drawing instructions
+            const frames = [
+                { id: 1, draw: drawTajBank, scale: 0.45, yOffset: 120 },
+                { id: 2, draw: drawRamadan, scale: 0.45, yOffset: 160 },
+                { id: 3, draw: drawEidMubarak, scale: 0.5, yOffset: 180 },
+                { id: 4, draw: drawLaylatulQadr, scale: 0.45, yOffset: 160 },
+                { id: 5, draw: drawZakat, scale: 0.45, yOffset: 160 },
+                { id: 6, draw: drawNigeriaMap, scale: 0.45, yOffset: 150 },
+                { id: 7, draw: drawMosque, scale: 0.5, yOffset: 180 }
+            ];
+
+            // Render each to canvas and extract pixels
+            for (const frame of frames) {
+                await new Promise(r => setTimeout(r, 10)); // Prevent thread blocking
+                ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+                frame.draw(ctx);
+                
+                // Extract points with a precision stride to get exactly the right density
+                pointSets[frame.id] = extractPoints(frame.scale, frame.yOffset);
+            }
+        }
+
+        // --- METICULOUS SHAPE DRAWING FUNCTIONS ---
+
+        function drawTajBank(ctx) {
+            ctx.textBaseline = 'middle';
+            const cx = CANVAS_W/2;
+            const cy = CANVAS_H/2;
+            
+            // 1. Red Stylized Caret (The shield/roof shape)
+            ctx.fillStyle = '#FF0000'; // Pure bright red for bloom
+            ctx.beginPath();
+            const px = cx - 250;
+            const py = cy + 120;
+            ctx.moveTo(px, py - 280);      // Top peak
+            ctx.lineTo(px - 100, py);      // Bottom left
+            ctx.lineTo(px - 30, py);       // Inner bottom left
+            ctx.lineTo(px, py - 140);      // Inner peak
+            ctx.lineTo(px + 30, py);       // Inner bottom right
+            ctx.lineTo(px + 100, py);      // Bottom right
+            ctx.fill();
+            
+            // Red Dot above the caret
+            ctx.beginPath(); 
+            ctx.arc(px, py - 350, 35, 0, Math.PI*2); 
+            ctx.fill();
+
+            // 2. The Letter 'T' inside/beside it
+            ctx.font = '900 280px "Arial Black", Arial, sans-serif';
+            ctx.fillText("T", cx - 500, cy + 30);
+            
+            // 3. The Letter 'J'
+            ctx.fillText("J", cx - 70, cy + 30);
+            
+            // 4. 'Bank' text
+            ctx.fillStyle = '#FFFFFF'; // Bright white for maximum contrast against night sky
+            ctx.font = '800 240px "Arial Black", Arial, sans-serif';
+            ctx.fillText("Bank", cx + 70, cy + 30);
+        }
+
+        function drawRamadan(ctx) {
+            const cx = CANVAS_W/2;
+            const cy = CANVAS_H/2;
+
+            // Ultra-sharp Crescent Moon
+            ctx.fillStyle = '#FFC107'; // Vivid amber/gold
+            ctx.beginPath(); 
+            ctx.arc(cx - 350, cy, 280, 0, Math.PI*2); 
+            ctx.fill();
+            
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath(); 
+            ctx.arc(cx - 260, cy - 60, 260, 0, Math.PI*2); 
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+            
+            // Elegant Text
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 120px "Times New Roman", Times, serif';
+            ctx.fillText("رمضان كريم", cx + 250, cy - 130);
+            
+            ctx.font = '900 80px "Montserrat", Arial, sans-serif';
+            ctx.fillText("RAMADAN KAREEM", cx + 250, cy + 20);
+            
+            ctx.fillStyle = '#00FF88'; // Vibrant neon green for Nigeria
+            ctx.font = '600 60px "Montserrat", Arial, sans-serif';
+            ctx.fillText("N I G E R I A", cx + 250, cy + 110);
+            ctx.textAlign = 'left'; 
+        }
+
+        function drawEidMubarak(ctx) {
+            const cx = CANVAS_W/2;
+            const cy = CANVAS_H/2;
+
+            // Complex Bursting Fireworks
+            const drawFirework = (x, y, color, size, density) => {
+                ctx.fillStyle = color;
+                for(let r=0; r<density; r++) {
+                    let angle = (r/density) * Math.PI*2;
+                    for(let d=10; d<size; d+=12) {
+                        ctx.beginPath();
+                        ctx.arc(x + Math.cos(angle)*d, y + Math.sin(angle)*d, 3.5, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+            };
+
+            drawFirework(cx - 500, cy - 220, '#FF2A55', 180, 24);
+            drawFirework(cx + 450, cy - 280, '#2AFFFF', 220, 28);
+            drawFirework(cx - 350, cy + 220, '#55FF2A', 140, 20);
+            drawFirework(cx + 400, cy + 180, '#FFC107', 160, 22);
+            drawFirework(cx, cy - 320, '#FF8800', 120, 16);
+
+            // Centered Text
+            ctx.fillStyle = '#FFF8D6';
+            ctx.textAlign = 'center';
+            ctx.font = 'italic 900 140px "Georgia", serif';
+            ctx.fillText("Eid Mubarak", cx, cy - 40);
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '800 65px "Montserrat", Arial, sans-serif';
+            ctx.fillText("BARKA DA SALLAH", cx, cy + 90);
+            
+            ctx.fillStyle = '#AAAAAA';
+            ctx.font = '700 55px "Montserrat", Arial, sans-serif';
+            ctx.fillText("E KU ODUN", cx, cy + 180);
+            ctx.textAlign = 'left';
+        }
+
+        function drawLaylatulQadr(ctx) {
+            ctx.strokeStyle = '#00E5FF'; // Cyan glowing aesthetic
+            ctx.fillStyle = '#00E5FF';
+            ctx.lineWidth = 18;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            const bx = CANVAS_W/2 - 350;
+            const by = CANVAS_H/2 + 120;
+            
+            // 1. Beautiful Open Book (Quran)
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo(bx - 120, by - 60, bx - 280, by - 30); // Left bottom page
+            ctx.lineTo(bx - 280, by - 180); // Left edge
+            ctx.quadraticCurveTo(bx - 120, by - 210, bx, by - 120); // Left top page
+            ctx.quadraticCurveTo(bx + 120, by - 210, bx + 280, by - 180); // Right top
+            ctx.lineTo(bx + 280, by - 30); // Right edge
+            ctx.quadraticCurveTo(bx + 120, by - 60, bx, by); // Right bottom
+            ctx.stroke();
+            
+            // Center spine
+            ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - 120); ctx.stroke();
+            
+            // 2. Abstract Praying Person Silhouette
+            const px = CANVAS_W/2 + 350;
+            const py = CANVAS_H/2 + 120;
+            
+            ctx.fillStyle = '#FFC107'; // Gold figure
+            ctx.beginPath();
+            ctx.arc(px + 90, py - 50, 110, Math.PI, 0); // Arched back
+            ctx.arc(px - 110, py - 15, 45, 0, Math.PI*2); // Head bowed
+            ctx.fill();
+            ctx.fillRect(px - 90, py - 50, 180, 50); // Connect body to head
+
+            // 3. Constellation/Stars above
+            ctx.fillStyle = '#FFFFFF';
+            for(let i=0; i<15; i++) {
+                let sx = 200 + i * 80;
+                let sy = 50 + Math.random() * 250;
+                ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI*2); ctx.fill();
+            }
+            
+            ctx.fillStyle = '#FFFFFF';
+            ctx.textAlign = 'center';
+            ctx.font = '800 60px "Montserrat"';
+            ctx.fillText("LAYLATUL QADR", CANVAS_W/2, CANVAS_H/2 + 250);
+            ctx.textAlign = 'left';
+        }
+
+        function drawZakat(ctx) {
+            const cx = CANVAS_W/2;
+            const cy = CANVAS_H/2 - 50;
+            
+            // Glowing Red Heart
+            ctx.fillStyle = '#FF0033';
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + 70);
+            ctx.bezierCurveTo(cx - 120, cy - 50, cx - 180, cy - 170, cx, cy - 280);
+            ctx.bezierCurveTo(cx + 180, cy - 170, cx + 120, cy - 50, cx, cy + 70);
+            ctx.fill();
+
+            // Stylized Charity Hands
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 22;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Hand 1 (Giving - Top right)
+            ctx.beginPath();
+            ctx.moveTo(cx + 550, cy - 200);
+            ctx.lineTo(cx + 250, cy - 150);
+            ctx.quadraticCurveTo(cx + 150, cy - 120, cx + 180, cy - 20); // Thumb wrap
+            ctx.stroke();
+
+            // Hand 2 (Receiving - Bottom left)
+            ctx.beginPath();
+            ctx.moveTo(cx - 550, cy + 80);
+            ctx.lineTo(cx - 250, cy + 50);
+            ctx.quadraticCurveTo(cx - 150, cy + 30, cx - 100, cy - 40); // Fingers up
+            ctx.stroke();
+
+            // Text
+            ctx.fillStyle = '#FFC107';
+            ctx.textAlign = 'center';
+            ctx.font = '900 85px "Montserrat", sans-serif';
+            ctx.fillText("ONE UMMAH", cx, cy + 220);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '700 55px "Montserrat", sans-serif';
+            ctx.fillText("ONE NATION", cx, cy + 300);
+            ctx.textAlign = 'left';
+        }
+
+        function drawNigeriaMap(ctx) {
+            const cx = CANVAS_W/2;
+            const cy = CANVAS_H/2;
+
+            ctx.strokeStyle = '#00FF44'; // Bright Nigerian Green
+            ctx.lineWidth = 18;
+            ctx.lineJoin = 'round';
+            
+            // Accurate Polygon of Nigeria Outline
+            ctx.beginPath();
+            ctx.moveTo(cx - 250, cy - 250); // NW Sokoto
+            ctx.lineTo(cx - 50, cy - 300);  // Katsina border
+            ctx.lineTo(cx + 250, cy - 200); // NE Borno
+            ctx.lineTo(cx + 380, cy - 50);  // East Adamawa
+            ctx.lineTo(cx + 250, cy + 180); // Taraba/Cross River
+            ctx.lineTo(cx + 80, cy + 320);  // South South/Delta
+            ctx.lineTo(cx - 150, cy + 250); // SW Lagos
+            ctx.lineTo(cx - 280, cy + 50);  // West Border
+            ctx.closePath();
+            ctx.stroke();
+            
+            // Faint inner fill for volume
+            ctx.fillStyle = 'rgba(0, 255, 68, 0.15)';
+            ctx.fill();
+
+            // Major Cities as massive glowing nodes
+            const drawCity = (x, y, name) => {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath(); ctx.arc(x, y, 22, 0, Math.PI*2); ctx.fill();
+                ctx.font = '900 50px "Montserrat"';
+                ctx.fillText(name, x + 35, y + 15);
+            };
+
+            drawCity(cx - 200, cy + 180, "Lagos");
+            drawCity(cx + 50, cy - 150, "Kano");
+            drawCity(cx + 10, cy + 50, "Abuja");
+            drawCity(cx + 200, cy + 260, "Port Harcourt");
+        }
+
+        function drawMosque(ctx) {
+            const cx = CANVAS_W/2;
+            const cy = CANVAS_H/2;
+            ctx.fillStyle = '#FFC107'; // Golden architectural glow
+            
+            // Grand Center Dome
+            ctx.beginPath(); 
+            ctx.arc(cx, cy + 120, 220, Math.PI, 0); 
+            ctx.fill();
+            
+            // Dome Spire & Crescent
+            ctx.fillRect(cx - 5, cy - 180, 10, 80);
+            ctx.beginPath(); ctx.arc(cx, cy - 210, 35, 0, Math.PI*2); ctx.fill();
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath(); ctx.arc(cx - 12, cy - 225, 30, 0, Math.PI*2); ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+
+            // Massive Base
+            ctx.fillStyle = '#FFC107';
+            ctx.fillRect(cx - 320, cy + 120, 640, 180);
+
+            // Detailed Arches cutouts
+            ctx.globalCompositeOperation = 'destination-out';
+            for(let i=0; i<4; i++) {
+                let ax = cx - 225 + (i * 150);
+                ctx.beginPath();
+                ctx.arc(ax, cy + 200, 45, Math.PI, 0);
+                ctx.fillRect(ax - 45, cy + 200, 90, 100);
+                ctx.fill();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+
+            // Tall Minarets
+            const drawMinaret = (x) => {
+                ctx.fillRect(x - 25, cy - 150, 50, 450); // Main pillar
+                ctx.beginPath(); ctx.arc(x, cy - 150, 40, Math.PI, 0); ctx.fill(); // Roof
+                // Decorative Balconies
+                ctx.fillRect(x - 40, cy - 30, 80, 18);
+                ctx.fillRect(x - 40, cy + 80, 80, 18);
+            };
+            drawMinaret(cx - 400);
+            drawMinaret(cx + 400);
+
+            // Majestic Light Beams hitting the sky
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            for(let i=0; i<5; i++) {
+                ctx.beginPath(); ctx.moveTo(cx - 420, cy + 50); ctx.lineTo(cx - 800, cy - 150 + i*60); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(cx + 420, cy + 50); ctx.lineTo(cx + 800, cy - 150 + i*60); ctx.stroke();
+            }
+        }
+
+        function extractPoints(scaleMult, yOffset) {
+            const imgData = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+            const data = imgData.data;
+            const points = [];
+
+            // We iterate through pixels. Stride of 3 balances high detail with point counts.
+            // Using probability to keep total points under DRONE_COUNT to avoid overlap.
+            for (let y = 0; y < CANVAS_H; y += 3) {
+                for (let x = 0; x < CANVAS_W; x += 3) {
+                    const i = (y * CANVAS_W + x) * 4;
+                    const r = data[i];
+                    const g = data[i+1];
+                    const b = data[i+2];
+                    const a = data[i+3];
+
+                    // Only select solid, bright pixels
+                    if (a > 100 && (r > 20 || g > 20 || b > 20)) {
+                        // Create layered depth based on brightness
+                        let depth = (r + g + b) / 765; 
+                        
+                        points.push({
+                            x: (x - CANVAS_W / 2) * scaleMult,
+                            y: -(y - CANVAS_H / 2) * scaleMult + yOffset,
+                            z: (depth * 40) - 20, // Clean, intentional 3D extrusion (not random noise)
+                            r: r / 255,
+                            g: g / 255,
+                            b: b / 255
+                        });
+                    }
+                }
+            }
+            
+            // Randomize array to distribute drone paths beautifully during transitions
+            return points.sort(() => Math.random() - 0.5);
+        }
+
+        function createLEDTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const context = canvas.getContext('2d');
+            
+            // Core bright LED with a smooth soft falloff
+            const grad = context.createRadialGradient(32, 32, 2, 32, 32, 30);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+            grad.addColorStop(0.2, 'rgba(255, 255, 255, 0.9)');
+            grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            context.fillStyle = grad;
+            context.fillRect(0, 0, 64, 64);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function setupDrones() {
+            const geometry = new THREE.BufferGeometry();
+            
+            // Use Float32Arrays for raw performance
+            positions = new Float32Array(DRONE_COUNT * 3);
+            targets = new Float32Array(DRONE_COUNT * 3);
+            colors = new Float32Array(DRONE_COUNT * 3);
+            targetColors = new Float32Array(DRONE_COUNT * 3);
+            velocities = new Float32Array(DRONE_COUNT * 3);
+
+            // Initialize at State 0 (Ground)
+            const initialPoints = pointSets[0];
+            for (let i = 0; i < DRONE_COUNT; i++) {
+                const pt = initialPoints[i];
+                let i3 = i * 3;
+                
+                positions[i3] = pt.x; positions[i3+1] = pt.y; positions[i3+2] = pt.z;
+                targets[i3] = pt.x; targets[i3+1] = pt.y; targets[i3+2] = pt.z;
+                
+                colors[i3] = pt.r; colors[i3+1] = pt.g; colors[i3+2] = pt.b;
+                targetColors[i3] = pt.r; targetColors[i3+1] = pt.g; targetColors[i3+2] = pt.b;
+                
+                velocities[i3] = 0; velocities[i3+1] = 0; velocities[i3+2] = 0;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 5.5, // Larger size to catch bloom effect
+                map: createLEDTexture(),
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.9,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            droneSystem = new THREE.Points(geometry, material);
+            scene.add(droneSystem);
+        }
+
+        window.setDroneState = function(stateIndex) {
+            currentState = stateIndex;
+            const points = pointSets[stateIndex];
+            const pLen = points.length;
+
+            if(!points || pLen === 0) return;
+
+            // UI
+            document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${stateIndex}`).classList.add('active');
+
+            // --- CRITICAL FIX: PREVENTING CLUTTER & OVERLAPPING ---
+            // If the shape requires X drones, we only use X drones. 
+            // The remaining drones are sent to form a beautiful, faint ambient background starfield.
+            for (let i = 0; i < DRONE_COUNT; i++) {
+                let i3 = i * 3;
+                
+                if (i < pLen) {
+                    // Drone is part of the main formation
+                    const pt = points[i]; 
+                    targets[i3] = pt.x;
+                    targets[i3+1] = pt.y;
+                    targets[i3+2] = pt.z;
+                    
+                    targetColors[i3] = pt.r;
+                    targetColors[i3+1] = pt.g;
+                    targetColors[i3+2] = pt.b;
+                } else {
+                    // EXCESS DRONES: Send to background so the logo stays perfectly sharp
+                    // We generate a massive dome of twinkling stars far behind the logo
+                    let radius = 1000 + Math.random() * 800;
+                    let theta = Math.random() * Math.PI * 2;
+                    let phi = Math.acos((Math.random() * 2) - 1);
+                    
+                    targets[i3] = radius * Math.sin(phi) * Math.cos(theta);
+                    targets[i3+1] = Math.abs(radius * Math.cos(phi)) + 100; // Keep above ground
+                    targets[i3+2] = radius * Math.sin(phi) * Math.sin(theta) - 500; // Push backward
+                    
+                    // Very dim cool blue/white
+                    targetColors[i3] = 0.05;
+                    targetColors[i3+1] = 0.08;
+                    targetColors[i3+2] = 0.15;
+                }
+            }
+        };
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+
+            if (droneSystem) {
+                const posAttr = droneSystem.geometry.attributes.position;
+                const colAttr = droneSystem.geometry.attributes.color;
+                
+                const posArray = posAttr.array;
+                const colArray = colAttr.array;
+
+                // Physics Engine Update
+                for (let i = 0; i < DRONE_COUNT; i++) {
+                    const i3 = i * 3;
+                    
+                    // 1. Spring Physics for Positions (creates beautiful organic swarming & settling)
+                    let dx = targets[i3] - posArray[i3];
+                    let dy = targets[i3+1] - posArray[i3+1];
+                    let dz = targets[i3+2] - posArray[i3+2];
+
+                    velocities[i3] += dx * SPRING_STRENGTH;
+                    velocities[i3+1] += dy * SPRING_STRENGTH;
+                    velocities[i3+2] += dz * SPRING_STRENGTH;
+
+                    // Apply damping (friction)
+                    velocities[i3] *= DAMPING;
+                    velocities[i3+1] *= DAMPING;
+                    velocities[i3+2] *= DAMPING;
+
+                    posArray[i3] += velocities[i3];
+                    posArray[i3+1] += velocities[i3+1];
+                    posArray[i3+2] += velocities[i3+2];
+
+                    // Add subtle floating hover (only to foreground shape drones, not the background stars)
+                    if (currentState !== 0 && targets[i3+2] > -400) {
+                        posArray[i3+1] += Math.sin(time * 2 + i * 0.1) * 0.15; 
+                    }
+
+                    // 2. Smooth LERP for Colors
+                    const colorLerp = 0.06;
+                    colArray[i3] += (targetColors[i3] - colArray[i3]) * colorLerp;
+                    colArray[i3+1] += (targetColors[i3+1] - colArray[i3+1]) * colorLerp;
+                    colArray[i3+2] += (targetColors[i3+2] - colArray[i3+2]) * colorLerp;
+                }
+
+                posAttr.needsUpdate = true;
+                colAttr.needsUpdate = true;
+            }
+
+            // Cinematic sweeping camera
+            controls.update();
+            camera.position.x = Math.sin(time * 0.08) * 450;
+            camera.position.z = Math.cos(time * 0.08) * 600 + 200;
+            camera.lookAt(0, 150, 0);
+
+            // Render through the Bloom Composer
+            composer.render();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>
